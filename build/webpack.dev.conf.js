@@ -9,8 +9,41 @@ const CopyWebpackPlugin = require('copy-webpack-plugin')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const FriendlyErrorsPlugin = require('friendly-errors-webpack-plugin')
 const portfinder = require('portfinder')
+
 const HOST = process.env.HOST
 const PORT = process.env.PORT && Number(process.env.PORT)
+/**数据获取*/
+var apiServer = express()
+var bodyParser = require('body-parser')
+apiServer.use(bodyParser.urlencoded({ extended: true }))
+apiServer.use(bodyParser.json())
+var apiRouter = express.Router()
+var fs = require('fs')
+apiRouter.route('/:apiName')
+.all(function (req, res) {
+ fs.readFile('./data.json', 'utf8', function (err, data) {
+  if (err) throw err
+  var data = JSON.parse(data)
+  if (data[req.params.apiName]) {
+   res.json(data[req.params.apiName]) 
+  }
+  else {
+   res.send('no such api name')
+  }
+ })
+})
+ 
+apiServer.use('/api', apiRouter);
+apiServer.listen(port + 1, function (err) {
+ if (err) {
+  console.log(err)
+  return
+ }
+ console.log('Listening at http://localhost:' + (port + 1) + '\n')
+})
+
+
+
 
 const devWebpackConfig = merge(baseWebpackConfig, {
   module: {
@@ -24,7 +57,7 @@ const devWebpackConfig = merge(baseWebpackConfig, {
     clientLogLevel: 'warning',
     historyApiFallback: {
       rewrites: [
-        { from: /.*/, to: path.join(config.dev.assetsPublicPath, 'index.html') },
+        { from: /.*/, to: path.posix.join(config.dev.assetsPublicPath, 'index.html') },
       ],
     },
     hot: true,
@@ -66,51 +99,7 @@ const devWebpackConfig = merge(baseWebpackConfig, {
     ])
   ]
 })
-const jsonServer = require('json-server')
-const apiServer = jsonServer.create()
-const apiRouter = jsonServer.router('./db.json')
-const middlewares = jsonServer.defaults()
 
-apiServer.use(middlewares)
-//apiServer.use(apiRouter)
-apiServer.use("/api",apiRouter)
-apiServer.listen(8888, () => {
-  console.log('JSON Server is running')
-})
-/*//首先
-const express = require('express')
-const app = express()
-var appData = require('../data.json')
-var seller = appData.seller
-var goods = appData.goods
-var ratings = appData.ratings
-var apiRoutes = express.Router()
-app.use('/api', apiRoutes)
-
-//找到devServer,添加
-before(app) {
-  app.get('/api/seller', (req, res) => {
-    res.json({
-      // 这里是你的json内容
-      errno: 0,
-      data: seller
-    })
-  }),
-  app.get('/api/goods', (req, res) => {
-    res.json({
-      // 这里是你的json内容
-      errno: 0,
-      data: goods
-    })
-  }),
-  app.get('/api/ratings', (req, res) => {
-    res.json({
-      // 这里是你的json内容
-      errno: 0,
-      data: ratings
-    })
-  })
-}*/
 module.exports = new Promise((resolve, reject) => {
   portfinder.basePort = process.env.PORT || config.dev.port
   portfinder.getPort((err, port) => {
